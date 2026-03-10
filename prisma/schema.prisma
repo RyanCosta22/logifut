@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  emailVerified DateTime?
+  role          Role      @default(USER)
+  clubs         Club[]    @relation("UserClubs")
+}
+
+model Club {
+  id           String        @id @default(uuid())
+  name         String
+  logo         String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  ownerId      String
+  owner        User          @relation("UserClubs", fields: [ownerId], references: [id])
+  players      Player[]
+  matches      Match[]
+  competitions Competition[]
+  costs        Cost[]
+  travelPlans  TravelPlan[]
+  formations   Formation[]
+}
+
+model Formation {
+  id        String   @id @default(uuid())
+  name      String
+  schema    String?  // Ex: 4-4-2, 4-3-3
+  notes     String?
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Player {
+  id        String   @id @default(uuid())
+  name      String
+  position  String
+  number    Int?
+  birthDate DateTime?
+  image     String?
+  clubId    String
+  club      Club     @relation(fields: [clubId], references: [id])
+}
+
+model Match {
+  id            String       @id @default(uuid())
+  opponent      String
+  date          DateTime
+  location      String?
+  result        String?
+  clubId        String
+  club          Club         @relation(fields: [clubId], references: [id])
+  competitionId String?
+  competition   Competition? @relation(fields: [competitionId], references: [id])
+}
+
+model Competition {
+  id          String  @id @default(uuid())
+  name        String
+  year        Int
+  type        String? // Liga, Copa, Torneio, Amistoso
+  status      String  @default("ATIVO") // ATIVO, FINALIZADO, PAUSADO
+  description String?
+  clubId      String
+  club        Club    @relation(fields: [clubId], references: [id])
+  matches     Match[]
+}
+
+model Cost {
+  id                 String   @id @default(uuid())
+  description        String
+  amount             Float
+  date               DateTime
+  category           String
+  isActive           Boolean  @default(true)
+  cancellationReason String?
+  clubId             String
+  club               Club     @relation(fields: [clubId], references: [id])
+}
+
+model TravelPlan {
+  id          String   @id @default(uuid())
+  destination String
+  departure   DateTime
+  returnDate  DateTime
+  clubId      String
+  club        Club     @relation(fields: [clubId], references: [id])
+}
