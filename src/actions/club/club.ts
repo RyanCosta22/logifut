@@ -42,7 +42,7 @@ export async function createClubAction(data: z.infer<typeof clubSchema>) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
-        error: error.errors[0].message,
+        error: error.message,
         success: false,
       };
     }

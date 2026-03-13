@@ -12,12 +12,12 @@ export default function ClubDashboardPage() {
   const params = useParams<{ clubId: string }>();
   const router = useRouter();
 
-  const { data: result, isLoading } = useQuery({
+  const { data: result, isLoading, isPending } = useQuery({
     queryKey: ["club", params.clubId],
     queryFn: () => getClubByIdAction(params.clubId),
   });
 
-  if (isLoading) {
+  if (isLoading || isPending) {
     return <div className="p-8 flex items-center justify-center min-h-[400px]">
       <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
     </div>;
@@ -118,9 +118,9 @@ export default function ClubDashboardPage() {
             <Calendar className="h-5 w-5 text-green-500" />
           </CardHeader>
           <CardContent>
-            {club?.matches?.length > 0 ? (
+            {club?.matches?.length !== 0 ? (
               <div className="space-y-4">
-                {club.matches.map((match: any) => (
+                {club?.matches.map((match: any) => (
                   <div key={match.id} className="flex items-center justify-between p-3 rounded-lg bg-zinc-50 border hover:bg-zinc-100 transition-colors cursor-pointer" onClick={() => router.push(`/dashboard/${params.clubId}/partidas`)}>
                     <div className="flex items-center gap-3">
                       <div className="bg-white p-2 rounded border font-bold text-xs text-center min-w-[50px]">
@@ -158,9 +158,9 @@ export default function ClubDashboardPage() {
             <Trophy className="h-5 w-5 text-amber-500" />
           </CardHeader>
           <CardContent>
-             {club?.competitions?.length > 0 ? (
+             {club?.competitions?.length !== 0 ? (
                <div className="space-y-4">
-                 {club.competitions.map((comp: any) => (
+                 {club?.competitions.map((comp: any) => (
                    <div key={comp.id} className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-100 shadow-sm">
                       <div className="flex flex-col">
                         <span className="font-black text-amber-900 text-sm">{comp.name}</span>

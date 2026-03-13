@@ -140,14 +140,6 @@ export function AppSidebar({ clubId }: AppSidebarProps) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild tooltip="Configurações">
-              <Link href={`/dashboard/${clubId}/configuracoes`}>
-                <Settings />
-                <span>Configurações</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
             <SidebarMenuButton 
               onClick={() => signOut({ callbackUrl: "/entrar" })}
               tooltip="Sair"

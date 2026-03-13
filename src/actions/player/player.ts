@@ -75,6 +75,24 @@ export async function updatePlayerAction(id: string, data: z.infer<typeof player
     }
 }
 
+export async function getUniquePlayerAction(clubId: string, id: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { error: "Não autorizado", success: false };
+
+    const player = await prisma.player.findUnique({
+      where: {
+        id,
+        club: { ownerId: session.user.id },
+      },
+    });
+
+    return { success: true, player };
+  } catch (error) {
+    return { error: "Erro ao buscar jogador", success: false };
+  }
+}
+
 export async function getPlayersAction(clubId: string) {
   try {
     const session = await getServerSession(authOptions);

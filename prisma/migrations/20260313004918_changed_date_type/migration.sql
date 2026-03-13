@@ -55,7 +55,7 @@ CREATE TABLE "Match" (
 CREATE TABLE "Competition" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
-    "year" INTEGER NOT NULL,
+    "year" TEXT NOT NULL,
     "type" TEXT,
     "status" TEXT NOT NULL DEFAULT 'ATIVO',
     "description" TEXT,

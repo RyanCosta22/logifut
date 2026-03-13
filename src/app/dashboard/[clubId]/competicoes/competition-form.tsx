@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -16,14 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -34,12 +26,13 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Trophy } from "lucide-react";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 
 const competitionSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
-  year: z.string().transform((v) => Number(v)),
+  year: z.string().min(1, "Selecione um ano"),
   type: z.string().min(1, "Selecione um tipo"),
-  status: z.string().default("ATIVO"),
+  status: z.string().min(1, "Selecione um status"),
   description: z.string().optional(),
 });
 
@@ -50,7 +43,13 @@ interface CompetitionFormProps {
 }
 
 const TYPES = [
-  "Liga", "Copa", "Torneio", "Amistoso", "Regional", "Nacional", "Internacional"
+  "Liga",
+  "Copa",
+  "Torneio",
+  "Amistoso",
+  "Regional",
+  "Nacional",
+  "Internacional",
 ];
 
 const STATUS = [
@@ -67,18 +66,20 @@ export function CompetitionForm({ clubId }: CompetitionFormProps) {
     resolver: zodResolver(competitionSchema),
     defaultValues: {
       name: "",
-      year: new Date().getFullYear().toString() as any,
+      year: "",
       type: "",
       status: "ATIVO",
       description: "",
     },
   });
 
+  const { control, handleSubmit } = form;
+
   const mutation = useMutation({
     mutationFn: async (values: CompetitionFormValues) => {
       const result = await createCompetitionAction({
         ...values,
-        year: values.year as number,
+        year: new Date(values.year).getFullYear().toString(),
         clubId,
       });
       if (result.error) throw new Error(result.error);
@@ -98,7 +99,10 @@ export function CompetitionForm({ clubId }: CompetitionFormProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="secondary" className="gap-2 bg-white text-amber-600 hover:bg-amber-50">
+        <Button
+          variant="secondary"
+          className="gap-2 bg-white text-amber-600 hover:bg-amber-50"
+        >
           <Trophy className="h-4 w-4" />
           Nova Competição
         </Button>
@@ -110,47 +114,51 @@ export function CompetitionForm({ clubId }: CompetitionFormProps) {
             Adicione uma nova competição ao calendário do clube.
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
-              control={form.control}
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="space-y-4 py-4"
+          >
+            <Controller
+              control={control}
               name="name"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome da Competição</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Ex: Campeonato Brasileiro 2026" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <Field>
+                  <FieldLabel>Nome da Competição</FieldLabel>
+                  <Input
+                    placeholder="Ex: Campeonato Brasileiro 2026"
+                    {...field}
+                  />
+                  <FieldError>{form.formState.errors.name?.message}</FieldError>
+                </Field>
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
+              <Controller
+                control={control}
                 name="year"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ano</FormLabel>
-                    <FormControl>
-                      <Input type="number" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <Field>
+                    <FieldLabel>Ano</FieldLabel>
+                    <Input type="date" {...field} />
+                    <FieldError>
+                      {form.formState.errors.year?.message}
+                    </FieldError>
+                  </Field>
                 )}
               />
-              <FormField
-                control={form.control}
+              <Controller
+                control={control}
                 name="type"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
+                  <Field>
+                    <FieldLabel>Tipo</FieldLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
                       <SelectContent>
                         {TYPES.map((t) => (
                           <SelectItem key={t} value={t}>
@@ -159,40 +167,43 @@ export function CompetitionForm({ clubId }: CompetitionFormProps) {
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
+                    <FieldError>
+                      {form.formState.errors.type?.message}
+                    </FieldError>
+                  </Field>
                 )}
               />
             </div>
-            <FormField
-              control={form.control}
+            <Controller
+              control={control}
               name="description"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Breve Descrição (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Objetivos ou notas sobre a competição..." 
-                      className="resize-none h-20"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <Field>
+                  <FieldLabel>Breve Descrição (Opcional)</FieldLabel>
+                  <Textarea
+                    placeholder="Objetivos ou notas sobre a competição..."
+                    className="resize-none h-20"
+                    {...field}
+                  />
+                  <FieldError>
+                    {form.formState.errors.description?.message}
+                  </FieldError>
+                </Field>
               )}
             />
-            <FormField
-              control={form.control}
+            <Controller
+              control={control}
               name="status"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status Inicial</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione" />
-                      </SelectTrigger>
-                    </FormControl>
+                <Field>
+                  <FieldLabel>Status Inicial</FieldLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione" />
+                    </SelectTrigger>
                     <SelectContent>
                       {STATUS.map((s) => (
                         <SelectItem key={s.value} value={s.value}>
@@ -201,18 +212,25 @@ export function CompetitionForm({ clubId }: CompetitionFormProps) {
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormMessage />
-                </FormItem>
+                  <FieldError>
+                    {form.formState.errors.status?.message}
+                  </FieldError>
+                </Field>
               )}
             />
             <DialogFooter className="pt-4">
-              <Button type="submit" disabled={mutation.isPending} className="w-full bg-amber-600 hover:bg-amber-700 text-white">
-                {mutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button
+                type="submit"
+                disabled={mutation.isPending}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                {mutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
                 Salvar Competição
               </Button>
             </DialogFooter>
           </form>
-        </Form>
       </DialogContent>
     </Dialog>
   );

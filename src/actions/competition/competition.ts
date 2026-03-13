@@ -8,7 +8,7 @@ import { revalidatePath } from "next/cache";
 
 const competitionSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
-  year: z.number().min(2000, "Ano inválido"),
+  year: z.string(),
   type: z.string().optional(),
   status: z.string().default("ATIVO"),
   description: z.string().optional(),

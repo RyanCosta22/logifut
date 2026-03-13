@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { Loader2, Plus, Trophy } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function DashboardPage() {
   const clubs = data || [];
 
   return (
-    <div className="container max-w-4xl mx-auto py-12 px-4">
+    <div className="container max-w-4xl mx-auto py-12 px-4 relative">
       <div className="flex flex-col items-center mb-12 text-center">
         <Trophy className="h-12 w-12 text-primary mb-4" />
         <h1 className="text-4xl font-bold tracking-tight mb-2">LogiFut</h1>
@@ -62,6 +63,7 @@ export default function DashboardPage() {
       </div>
 
       {!isCreating ? (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {clubs.map((club: any) => (
             <Card key={club.id} className="hover:shadow-md transition-shadow cursor-pointer border-2 hover:border-primary/50" onClick={() => router.push(`/dashboard/${club.id}`)}>
@@ -88,8 +90,18 @@ export default function DashboardPage() {
             <Plus className="h-8 w-8 text-muted-foreground mb-2" />
             <p className="font-medium text-muted-foreground">Cadastrar Novo Clube</p>
           </Card>
+            
         </div>
+        <Button 
+              onClick={() => signOut({ callbackUrl: "/entrar" })}
+              variant={"destructive"}
+              className="absolute top-0 right-0 mt-2"
+            >
+              Sair
+            </Button>
+            </>
       ) : (
+        <>
         <Card className="max-w-md mx-auto">
           <CardHeader>
             <CardTitle>Novo Clube</CardTitle>
@@ -116,8 +128,17 @@ export default function DashboardPage() {
               {createMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Criar Clube
             </Button>
+            
           </CardFooter>
         </Card>
+        <Button 
+              onClick={() => signOut({ callbackUrl: "/entrar" })}
+              variant={"destructive"}
+              className="absolute top-0 right-0 mt-2"
+            >
+              Sair
+            </Button>
+            </>
       )}
     </div>
   );

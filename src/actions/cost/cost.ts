@@ -14,6 +14,24 @@ const costSchema = z.object({
   clubId: z.string(),
 });
 
+export async function getUniqueCostsAction(clubId: string, id: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) return { error: "Não autorizado", success: false };
+
+    const cost = await prisma.cost.findUnique({
+      where: { 
+        id,
+        club: { ownerId: session.user.id }
+      }
+    });
+
+    return { success: true, cost };
+  } catch (error) {
+    return { error: "Erro ao buscar custo", success: false };
+  }
+}
+
 export async function createCostAction(data: z.infer<typeof costSchema>) {
   try {
     const session = await getServerSession(authOptions);

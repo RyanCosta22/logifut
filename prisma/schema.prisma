@@ -74,7 +74,7 @@ model Match {
 model Competition {
   id          String  @id @default(uuid())
   name        String
-  year        Int
+  year        String
   type        String? // Liga, Copa, Torneio, Amistoso
   status      String  @default("ATIVO") // ATIVO, FINALIZADO, PAUSADO
   description String?
@@ -86,7 +86,7 @@ model Competition {
 model Cost {
   id                 String   @id @default(uuid())
   description        String
-  amount             Float
+  amount             Int
   date               DateTime
   category           String
   isActive           Boolean  @default(true)

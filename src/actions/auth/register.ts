@@ -44,7 +44,7 @@ export async function registerAction(data: z.infer<typeof registerSchema>) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return {
-        error: error.errors[0].message,
+        error: error.message,
         success: false,
       };
     }

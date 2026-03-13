@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createPlayerAction, updatePlayerAction } from "@/actions/player/player";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createPlayerAction, getUniquePlayerAction, updatePlayerAction } from "@/actions/player/player";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,14 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -32,12 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, UserPlus, Pencil } from "lucide-react";
+import { Loader2, UserPlus } from "lucide-react";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 
 const playerSchema = z.object({
   name: z.string().min(2, "O nome deve ter pelo menos 2 caracteres"),
   position: z.string().min(1, "Selecione uma posição"),
-  number: z.string().transform((v) => (v === "" ? undefined : Number(v))),
+  number: z.number(),
   birthDate: z.string().optional(),
   image: z.string().url("Insira uma URL válida").or(z.literal("")).optional(),
 });
@@ -46,9 +39,9 @@ type PlayerFormValues = z.infer<typeof playerSchema>;
 
 interface PlayerFormProps {
   clubId: string;
-  player?: any;
+  playerId?: string;
   trigger?: React.ReactNode;
-  onSuccess?: () => void;
+  onSuccess?: () => void; 
 }
 
 const POSITIONS = [
@@ -63,53 +56,61 @@ const POSITIONS = [
   { label: "Centroavante", value: "Centroavante" },
 ];
 
-export function PlayerForm({ clubId, player, trigger, onSuccess }: PlayerFormProps) {
+const EMPTY_VALUES: PlayerFormValues = {
+  name: "",
+  position: "",
+  number: 0,
+  birthDate: "",
+  image: "",
+};
+
+export function PlayerForm({ clubId, playerId, trigger, onSuccess }: PlayerFormProps) {
   const [open, setOpen] = useState(false);
+  const isEditing = Boolean(playerId);
   const queryClient = useQueryClient();
-  const isEditing = !!player;
+
+  const { data: playerData, isLoading: loadingPlayer } = useQuery({
+    queryKey: ["player", playerId],
+    queryFn: () => getUniquePlayerAction(clubId, playerId!),
+    enabled: open && Boolean(playerId),
+  });
 
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerSchema),
-    defaultValues: {
-      name: player?.name || "",
-      position: player?.position || "",
-      number: player?.number?.toString() || "" as any,
-      birthDate: player?.birthDate ? new Date(player.birthDate).toISOString().split('T')[0] : "",
-      image: player?.image || "",
-    },
+    defaultValues: EMPTY_VALUES,
   });
 
   useEffect(() => {
-    if (open && player) {
-        form.reset({
-            name: player.name,
-            position: player.position,
-            number: player.number?.toString() || "" as any,
-            birthDate: player.birthDate ? new Date(player.birthDate).toISOString().split('T')[0] : "",
-            image: player.image || "",
-        });
+    if (playerData?.player) {
+      const p = playerData.player;
+      form.reset({
+        name: p.name,
+        position: p.position,
+        number: p.number ?? undefined,
+        birthDate: p.birthDate ? new Date(p.birthDate).toISOString().split("T")[0] : "",
+        image: p.image ?? "",
+      });
     }
-  }, [open, player, form]);
+  }, [playerData, form]);
+
+  useEffect(() => {
+    if (!open) {
+      form.reset(EMPTY_VALUES);
+    }
+  }, [open, form]);
 
   const mutation = useMutation({
     mutationFn: async (values: PlayerFormValues) => {
-      const payload = {
-        ...values,
-        number: values.number as number,
-        clubId,
-      };
-
-      const result = isEditing 
-        ? await updatePlayerAction(player.id, payload)
+      const payload = { ...values, clubId };
+      const result = isEditing
+        ? await updatePlayerAction(playerId!, payload)
         : await createPlayerAction(payload);
-
       if (result.error) throw new Error(result.error);
       return result.player;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["players", clubId] });
       setOpen(false);
-      if (!isEditing) form.reset();
       onSuccess?.();
     },
   });
@@ -121,11 +122,11 @@ export function PlayerForm({ clubId, player, trigger, onSuccess }: PlayerFormPro
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-            <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all active:scale-95">
-                <UserPlus className="h-4 w-4" />
-                Novo Atleta
-            </Button>
+        {trigger ?? (
+          <Button className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all active:scale-95">
+            <UserPlus className="h-4 w-4" />
+            Novo Atleta
+          </Button>
         )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
@@ -135,34 +136,35 @@ export function PlayerForm({ clubId, player, trigger, onSuccess }: PlayerFormPro
             {isEditing ? "Atualize as informações do jogador." : "Preencha as informações do atleta para cadastrá-lo."}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
+
+        {isEditing && loadingPlayer ? (
+          <div className="flex justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+          </div>
+        ) : (
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField
+            <Controller
               control={form.control}
               name="name"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome Completo</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nome do jogador" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <Field>
+                  <FieldLabel>Nome Completo</FieldLabel>
+                  <Input placeholder="Nome do jogador" {...field} />
+                  <FieldError errors={[form.formState.errors.name]} />
+                </Field>
               )}
             />
             <div className="grid grid-cols-2 gap-4">
-              <FormField
+              <Controller
                 control={form.control}
                 name="position"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Posição</FormLabel>
+                  <Field>
+                    <FieldLabel>Posição</FieldLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione" />
+                      </SelectTrigger>
                       <SelectContent>
                         {POSITIONS.map((pos) => (
                           <SelectItem key={pos.value} value={pos.value}>
@@ -171,48 +173,53 @@ export function PlayerForm({ clubId, player, trigger, onSuccess }: PlayerFormPro
                         ))}
                       </SelectContent>
                     </Select>
-                    <FormMessage />
-                  </FormItem>
+                    <FieldError errors={[form.formState.errors.position]} />
+                  </Field>
                 )}
               />
-              <FormField
+              <Controller
                 control={form.control}
                 name="number"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número</FormLabel>
-                    <FormControl>
-                      <Input type="number" placeholder="Ex: 10" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <Field>
+                    <FieldLabel>Número</FieldLabel>
+                    <Input
+                      type="number"
+                      placeholder="Ex: 10"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={field.value ?? ""}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        field.onChange(value === "" ? undefined : value);
+                      }}
+                    />
+                    <FieldError errors={[form.formState.errors.number]} />
+                  </Field>
                 )}
               />
             </div>
-            <FormField
+            <Controller
               control={form.control}
               name="image"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL da Foto (Opcional)</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://exemplo.com/foto.jpg" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <Field>
+                  <FieldLabel>URL da Foto (Opcional)</FieldLabel>
+                  <Input placeholder="https://exemplo.com/foto.jpg" {...field} value={field.value ?? ""} />
+                  <FieldError errors={[form.formState.errors.image]} />
+                </Field>
               )}
             />
-            <FormField
+            <Controller
               control={form.control}
               name="birthDate"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data de Nascimento</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+                <Field>
+                  <FieldLabel>Data de Nascimento</FieldLabel>
+                  <Input type="date" {...field} value={field.value ?? ""} />
+                  <FieldError errors={[form.formState.errors.birthDate]} />
+                </Field>
               )}
             />
             <DialogFooter className="pt-4">
@@ -222,7 +229,7 @@ export function PlayerForm({ clubId, player, trigger, onSuccess }: PlayerFormPro
               </Button>
             </DialogFooter>
           </form>
-        </Form>
+        )}
       </DialogContent>
     </Dialog>
   );

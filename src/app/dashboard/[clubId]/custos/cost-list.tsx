@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { getCostsAction, inactivateCostAction } from "@/actions/cost/cost";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -23,6 +23,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+interface CostItem {
+  id: string;
+  description: string;
+  amount: number;
+  date: string | Date;
+  category: string;
+  isActive: boolean;
+  cancellationReason?: string | null;
+}
 
 interface CostListProps {
   clubId: string;
@@ -57,9 +67,9 @@ export function CostList({ clubId }: CostListProps) {
     );
   }
 
-  const costs = result?.costs || [];
-  const activeCosts = costs.filter((c: any) => c.isActive);
-  const totalAmount = activeCosts.reduce((acc: number, curr: any) => acc + curr.amount, 0);
+  const costs: CostItem[] = result?.costs ?? [];
+  const activeCosts = costs.filter((cost) => cost.isActive);
+  const totalAmount = activeCosts.reduce((acc, curr) => acc + curr.amount, 0);
 
   if (costs.length === 0) {
     return (
@@ -95,7 +105,7 @@ export function CostList({ clubId }: CostListProps) {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {costs.map((cost: any) => (
+        {costs.map((cost) => (
           <Card key={cost.id} className={`overflow-hidden border-none shadow-md hover:shadow-xl transition-all relative ${!cost.isActive ? 'opacity-60 grayscale-[0.5]' : ''}`}>
             <div className={`h-1.5 ${cost.isActive ? 'bg-emerald-500' : 'bg-rose-400'}`} />
             <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 bg-zinc-50/50 border-b">
@@ -115,9 +125,9 @@ export function CostList({ clubId }: CostListProps) {
                 <DropdownMenuContent align="end">
                     <CostForm 
                         clubId={clubId} 
-                        cost={cost} 
+                        costId={cost.id} 
                         trigger={
-                            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                        <DropdownMenuItem onSelect={(event) => event.preventDefault()}>
                                 <Pencil className="mr-2 h-4 w-4" /> Editar
                             </DropdownMenuItem>
                         }
