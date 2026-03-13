@@ -79,6 +79,7 @@ export function PlayerForm({ clubId, playerId, trigger, onSuccess }: PlayerFormP
     resolver: zodResolver(playerSchema),
     defaultValues: EMPTY_VALUES,
   });
+  const { register } = form;
 
   useEffect(() => {
     if (playerData?.player) {
@@ -184,17 +185,12 @@ export function PlayerForm({ clubId, playerId, trigger, onSuccess }: PlayerFormP
                   <Field>
                     <FieldLabel>Número</FieldLabel>
                     <Input
-                      type="number"
-                      placeholder="Ex: 10"
-                      name={field.name}
-                      ref={field.ref}
-                      onBlur={field.onBlur}
-                      value={field.value ?? ""}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        field.onChange(value === "" ? undefined : value);
-                      }}
-                    />
+                  id="number"
+                  type="number"
+                  placeholder="10"
+                  className="border-2 pl-10"
+                  {...register("number", { valueAsNumber: true })}
+                />
                     <FieldError errors={[form.formState.errors.number]} />
                   </Field>
                 )}
